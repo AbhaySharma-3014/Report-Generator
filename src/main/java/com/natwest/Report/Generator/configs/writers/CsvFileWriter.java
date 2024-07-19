@@ -1,6 +1,5 @@
 package com.natwest.Report.Generator.configs.writers;
 
-import com.natwest.Report.Generator.configs.readers.CsvFileReader;
 import com.natwest.Report.Generator.entities.OutputData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,6 +9,8 @@ import org.springframework.batch.item.file.FlatFileItemWriter;
 import org.springframework.batch.item.file.builder.FlatFileItemWriterBuilder;
 import org.springframework.batch.item.file.transform.BeanWrapperFieldExtractor;
 import org.springframework.batch.item.file.transform.DelimitedLineAggregator;
+import org.springframework.batch.item.file.transform.LineAggregator;
+import org.springframework.batch.item.file.transform.PassThroughLineAggregator;
 import org.springframework.core.io.FileSystemResource;
 
 import java.lang.reflect.Field;
@@ -38,15 +39,17 @@ public class CsvFileWriter implements FileWriter {
 
         LOGGER.info("Total Output Fields : {}", fields.length);
 
+        BeanWrapperFieldExtractor<OutputData> fieldExtractor = new BeanWrapperFieldExtractor<>();
+        fieldExtractor.setNames(fields);
+
         csvFileWriter = new FlatFileItemWriterBuilder<OutputData>()
                 .name("csvFileWriter")
                 .resource(new FileSystemResource(outputFilePath))
-                .lineAggregator(new DelimitedLineAggregator<>() {{
+                .lineAggregator(new DelimitedLineAggregator<OutputData>() {{
                     setDelimiter(",");
-                    setFieldExtractor(new BeanWrapperFieldExtractor<OutputData>() {{
-                        setNames(fields);
-                    }});
+                    setFieldExtractor(fieldExtractor);
                 }})
+                .headerCallback(writer -> writer.write(String.join(",", fields)))
                 .build();
 
         csvFileWriter.setShouldDeleteIfExists(true);
